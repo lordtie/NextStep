@@ -4,23 +4,24 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
 
+const { FE_URL } = require("../config");
 const app = express();
 const PORT = 5000;
 
 app.use(express.json());
 
-// ✅ Allow requests from your frontend
+//  Allow requests from your frontend
 app.use(
   cors({
-    origin: "https://repulsive-goblin-4pq9qrg5p6q354g-3000.app.github.dev", // your frontend URL
-    methods: ["GET", "POST"],
+    origin: FE_URL, // your frontend URL
+    methods: ["GET", "POST"], 
     credentials: true,
   })
-);
+); 
 
 app.use((req, res, next) => {
   req.url = req.url.replace(/\/+/g, '/'); // remove double slashes
-  next();
+  next(); 
 });
 
 app.use((req, res, next) => {
@@ -34,7 +35,7 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 
 // Paths to JSON files
-const usersFile = path.join(__dirname, "tempjsons", "users.json");
+const usersFile = path.join(__dirname,  "users.json");
 const tasksFile = path.join(__dirname, "tempjsons", "tasks.json");
 
 // Helper functions to load and save JSON

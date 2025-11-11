@@ -11,7 +11,7 @@ export default function Register({ onRegister }) {
     setError("");
 
     try {
-      const res = await fetch(`${API_URL}/api/register`.replace(/\/\/+/g, '/').replace('https:/', 'https://'), {
+      const res = await fetch(`${API_URL}/api/register`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ username, email, password }),

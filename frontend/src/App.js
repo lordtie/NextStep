@@ -15,12 +15,12 @@ function App() {
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
+  }, []); 
 
   // Load tasks for logged-in user
   useEffect(() => {
     if (!user) return;
-    fetch(`${API_URL}/tasks`.replace(/\/\/+/g, '/').replace('https:/', 'https://'))
+    fetch(`${API_URL}/tasks`)
       .then((res) => res.json())
       .then((data) => setTasks(data))
       .catch((err) => console.error("Error loading tasks:", err));
