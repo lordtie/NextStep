@@ -1,0 +1,23 @@
+{
+  "userId": "9f6a8930-cd47-403b-95ee-55ee4c1652a1",
+  "username": "Admin",
+  "email": "2@2",
+  "createdAt": "2025-11-11T23:59:49.797Z",
+  "profile": {
+    "location": null,
+    "timezone": null
+  },
+  "tasks": [
+    {
+      "id": "69003572-41ab-451e-924a-f90ec0dfff66",
+      "title": "Go for a Run",
+      "notes": "Run 5 miles at 7:30 pace",
+      "dueDate": "2025-11-12T16:30",
+      "status": "Not Started",
+      "createdAt": "2025-11-12T05:30:44.864Z",
+      "updatedAt": "2025-11-12T05:30:44.864Z"
+    }
+  ],
+  "calendar": [],
+  "reminders": []
+}
