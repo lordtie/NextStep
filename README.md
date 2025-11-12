@@ -20,7 +20,7 @@
 ## Tech Stack
 - **Frontend:** React  
 - **Backend:** Node.js, Express  
-- **Database:** PostgreSQL  
+- **Database:** JSON (Temporary)
 - **Authentication:** JWT  
 - **Security:** bcrypt for password hashing  
 
