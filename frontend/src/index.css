@@ -1,13 +1,36 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light first; dark via .dark on <html> */
+@layer base {
+  html, body, #root { height: 100%; }
+
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased;
+  }
+  .dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  /* Better default link colors */
+  a {
+    @apply text-sky-700 hover:text-sky-800 underline-offset-2 decoration-sky-300 hover:underline;
+  }
+  .dark a {
+    @apply text-sky-300 hover:text-sky-200 decoration-sky-600;
+  }
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* Reusable focus ring */
+@layer components {
+  .focus-ring {
+    @apply focus:outline-none
+           focus:ring-2
+           focus:ring-offset-2
+           focus:ring-sky-400
+           focus:ring-offset-white
+           dark:focus:ring-slate-600
+           dark:focus:ring-offset-slate-900;
+  }
 }

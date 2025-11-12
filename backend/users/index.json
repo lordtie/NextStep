@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "uid": "admin",
+      "email": "2@2",
+      "name": "Admin",
+      "passwordHash": "$2b$10$slqgVLkpQxRdQ1wNbKzyoe.pGwPxxDcXUNigErFmNTOVG/r8b8Q.y",
+      "createdAt": "2025-11-12T07:05:20.491Z"
+    }
+  ]
+}

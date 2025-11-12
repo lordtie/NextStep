@@ -1,88 +1,49 @@
-import React, { useState, useEffect } from "react";
-import TaskList from "./components/TaskList";
-import AddTaskForm from "./components/AddTaskForm";
-import CalendarView from "./components/CalendarView";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import { API_URL } from "./config";
+import React from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import AppShell from "./components/AppShell";
+import Dashboard from "./pages/Dashboard";
+import Tasks from "./pages/Tasks";
+import CalendarPage from "./pages/Calendar";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import { useAuth } from "./auth/AuthProvider";
 
-function App() {
-  const [tasks, setTasks] = useState([]);
-  const [user, setUser] = useState(null);
-  const [showRegister, setShowRegister] = useState(false);
+function RequireAuth({ children }) {
+  const { user, loading } = useAuth();
+  const loc = useLocation();
+  if (loading) return <div className="p-6">Loading…</div>;
+  if (!user) return <Navigate to="/login" replace state={{ from: loc }} />;
+  return children;
+}
 
-  // stay logged in
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
-
-  // initial load for logged-in user
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.id) {
-        setTasks([]);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_URL}/api/tasks?userId=${encodeURIComponent(user.id)}`);
-        if (!res.ok) {
-          setTasks([]);
-          return;
-        }
-        const data = await res.json();
-        setTasks(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error("Error loading tasks:", e);
-        setTasks([]);
-      }
-    };
-    load();
-  }, [user]);
-
-  // child callbacks → instant UI updates here (keeps TaskList & Calendar in sync)
-  const handleTaskAdded = (createdTask) => {
-    setTasks((prev) => [createdTask, ...prev]);
-  };
-  const handleTaskUpdated = (updatedTask) => {
-    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-  };
-  const handleTaskDeleted = (deletedId) => {
-    setTasks((prev) => prev.filter((t) => t.id !== deletedId));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-    setTasks([]);
-  };
-
-  // auth gate
-  if (!user) {
-    return showRegister ? (
-      <Register onRegister={setUser} />
-    ) : (
-      <Login onLogin={setUser} onShowRegister={() => setShowRegister(true)} />
-    );
-  }
-
+export default function App() {
   return (
-    <div className="app">
-      <h1>NextStep Tasks</h1>
-      <p>Welcome, {user.username}!</p>
-      <button onClick={handleLogout}>Logout</button>
-
-      <AddTaskForm onAdd={handleTaskAdded} />
-
-      <TaskList
-        tasks={tasks}
-        onTaskUpdated={handleTaskUpdated}
-        onTaskDeleted={handleTaskDeleted}
+    <Routes>
+      <Route path="/login" element={<AuthLayout><Login /></AuthLayout>} />
+      <Route path="/register" element={<AuthLayout><Register /></AuthLayout>} />
+      <Route
+        path="/*"
+        element={
+          <RequireAuth>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<div className="p-6">Not found.</div>} />
+              </Routes>
+            </AppShell>
+          </RequireAuth>
+        }
       />
-
-      <CalendarView tasks={tasks} />
-    </div>
+    </Routes>
   );
 }
 
-export default App;
+function AuthLayout({ children }) {
+  // simple centered auth layout
+  return <div className="min-h-screen bg-slate-900 text-slate-100 px-4">{children}</div>;
+}
