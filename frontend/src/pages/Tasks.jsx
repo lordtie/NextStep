@@ -1,52 +1,37 @@
+// frontend/src/pages/Tasks.jsx
 import React from "react";
-import { useLocation } from "react-router-dom";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
-import Input from "../components/ui/Input";
-import Badge from "../components/ui/Badge";
-import Modal from "../components/ui/Modal";
-import DateTimeField from "../components/ui/DateTimeField";
 import { api } from "../lib/api";
+import DateTimeField from "../components/ui/DateTimeField";
 
-const statusLabel = {
-  todo: "Not Started Yet",
-  in_progress: "In Progress",
-  done: "Complete",
-};
-const statusBadge = { todo: "slate", in_progress: "amber", done: "emerald" };
+const STATUS_OPTIONS = ["Not Started Yet", "In Progress", "Completed"];
 
-function StatusDot({ status }) {
-  const map = {
-    todo: "bg-slate-400",
-    in_progress: "bg-amber-400",
-    done: "bg-emerald-400",
-  };
-  return <span className={`inline-block h-3 w-3 rounded-full ${map[status] || map.todo}`} />;
+function statusClasses(status) {
+  switch (status) {
+    case "Done":
+      return { dot: "bg-green-500", text: "text-green-700 dark:text-green-300", pill: "bg-green-100 dark:bg-green-900/30" };
+    case "In Progress":
+      return { dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-300", pill: "bg-blue-100 dark:bg-blue-900/30" };
+    default:
+      return { dot: "bg-slate-400", text: "text-slate-700 dark:text-slate-300", pill: "bg-slate-100 dark:bg-slate-800" };
+  }
 }
 
 export default function Tasks() {
   const [items, setItems] = React.useState([]);
-  const [title, setTitle] = React.useState("");
-  const [dueDate, setDueDate] = React.useState(null); // Date or null
-  const [notes, setNotes] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
 
-  const [editing, setEditing] = React.useState(null);
-  const [editTitle, setEditTitle] = React.useState("");
-  const [editDue, setEditDue] = React.useState(null);
-  const [editStatus, setEditStatus] = React.useState("todo");
-  const [editNotes, setEditNotes] = React.useState("");
-
-  const titleRef = React.useRef(null);
-  const { search } = useLocation();
+  // Add bar
+  const [title, setTitle] = React.useState("");
+  const [showDue, setShowDue] = React.useState(false);
+  const [dueAt, setDueAt] = React.useState(null);
 
   React.useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
-        setLoading(true);
         const data = await api.listTasks();
-        setItems(data || []);
+        setItems(Array.isArray(data) ? data : []);
       } catch (e) {
         setError(e.message || "Failed to load tasks");
       } finally {
@@ -55,203 +40,274 @@ export default function Tasks() {
     })();
   }, []);
 
-  React.useEffect(() => {
-    const params = new URLSearchParams(search);
-    if (params.get("new") === "1" && titleRef.current) titleRef.current.focus();
-  }, [search]);
-
-  async function addTask(e) {
+  async function handleAdd(e) {
     e.preventDefault();
-    if (!title.trim()) return;
-
-    // Store due as YYYY-MM-DD (date-only) if provided
-    const due = dueDate ? dueDate.toISOString().slice(0, 10) : null;
-    const payload = { title: title.trim(), due, status: "todo", notes };
-
-    const tempId = Date.now().toString();
-    setItems(prev => [{ id: tempId, ...payload, done: false }, ...prev]);
-
+    const t = title.trim();
+    if (!t) return;
     try {
-      const created = await api.createTask(payload);
-      setItems(prev => prev.map(t => (t.id === tempId ? created : t)));
-      setTitle(""); setNotes(""); setDueDate(null);
-      titleRef.current?.focus();
-    } catch (e2) {
-      setItems(prev => prev.filter(t => t.id !== tempId));
-      alert(e2.message);
+      const created = await api.createTask({
+        title: t,
+        status: "Open",
+        completed: false,
+        dueAt: dueAt || null,
+      });
+      setItems((prev) => [created, ...prev]);
+      setTitle("");
+      setDueAt(null);
+      setShowDue(false);
+    } catch (e) {
+      setError(e.message || "Failed to add task");
     }
   }
 
-  async function toggleDone(id) {
-    const task = items.find(t => t.id === id);
-    if (!task) return;
-    const newStatus = (task.status || "todo") === "done" ? "todo" : "done";
-    const updated = { ...task, status: newStatus, done: newStatus === "done" };
-    setItems(prev => prev.map(t => (t.id === id ? updated : t)));
-    try { await api.updateTask(id, { status: newStatus, done: newStatus === "done" }); }
-    catch (e) { setItems(prev => prev.map(t => (t.id === id ? task : t))); alert(e.message); }
+  async function persist(id, patch) {
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    try {
+      await api.updateTask(id, patch);
+    } catch (e) {
+      setError(e.message || "Failed to update task");
+      try {
+        const data = await api.listTasks();
+        setItems(Array.isArray(data) ? data : []);
+      } catch {}
+    }
   }
 
-  function openEdit(t) {
-    setEditing(t);
-    setEditTitle(t.title || "");
-    setEditDue(t.due ? new Date(`${t.due}T00:00`) : null);
-    setEditStatus(t.status || (t.done ? "done" : "todo"));
-    setEditNotes(t.notes || "");
+  async function removeTask(id) {
+    const keep = items;
+    setItems((prev) => prev.filter((x) => x.id !== id));
+    try {
+      if (api.deleteTask) await api.deleteTask(id);
+      else await api.removeTask(id);
+    } catch (e) {
+      setError(e.message || "Failed to delete task");
+      setItems(keep);
+    }
   }
-
-  async function saveEdit() {
-    const id = editing.id;
-    const due = editDue ? editDue.toISOString().slice(0, 10) : null;
-    const patch = {
-      title: editTitle.trim() || "Untitled",
-      due,
-      status: editStatus,
-      notes: editNotes,
-      done: editStatus === "done",
-    };
-    const before = items;
-    setItems(prev => prev.map(t => (t.id === id ? { ...t, ...patch } : t)));
-    try { await api.updateTask(id, patch); setEditing(null); }
-    catch (e) { setItems(before); alert(e.message); }
-  }
-
-  async function remove(id) {
-    const snap = items;
-    setItems(prev => prev.filter(t => t.id !== id));
-    try { await api.deleteTask(id); }
-    catch (e) { setItems(snap); alert(e.message); }
-  }
-
-  const openCount = items.filter(i => (i.status || (i.done ? "done" : "todo")) !== "done").length;
 
   return (
-    <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-        <div className="text-sm text-slate-500 dark:text-slate-300">
-          {loading ? "Loading…" : `${openCount} open / ${items.length} total`}
+    <div className="max-w-5xl">
+      <h1 className="text-2xl font-bold mb-4">Tasks</h1>
+
+      {/* Add bar */}
+      <form onSubmit={handleAdd} className="mb-4 rounded-lg border border-slate-200 dark:border-slate-800 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="min-w-[260px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            placeholder="Add a task…"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowDue((v) => !v)}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+            {showDue ? "Hide due date" : "Add due date"}
+          </button>
+
+          <button
+            type="submit"
+            disabled={!title.trim()}
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            Add task
+          </button>
         </div>
-      </div>
 
-      <Card className="mt-6">
-        <form onSubmit={addTask} className="grid grid-cols-1 gap-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Input
-              ref={titleRef}
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Task title…"
-            />
-            <DateTimeField
-              mode="date"
-              value={dueDate}
-              onChange={setDueDate}
-              placeholder="Due date (optional)"
-            />
-            <Button type="submit" className="sm:justify-self-start">Add</Button>
+        {showDue && (
+          <div className="mt-3 rounded-md border border-slate-200 p-3 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60">
+            <DateTimeField value={dueAt} onChange={setDueAt} label="Due" compact className="space-y-1" />
           </div>
-
-          <div>
-            <div className="mb-1 text-sm text-slate-600 dark:text-slate-300">Notes (optional)</div>
-            <textarea
-              rows={3}
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus-ring dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Details, links, sub-tasks…"
-            />
-          </div>
-        </form>
-        {error && <div className="mt-3 text-sm text-rose-500 dark:text-rose-400">{error}</div>}
-      </Card>
-
-      <Card className="mt-4">
-        {loading ? (
-          <div>Loading…</div>
-        ) : (
-          <ul className="divide-y divide-slate-200 dark:divide-slate-700">
-            {items.map((t) => {
-              const st = t.status || (t.done ? "done" : "todo");
-              return (
-                <li key={t.id} className="flex items-start gap-3 py-3">
-                  <StatusDot status={st} />
-                  <input
-                    type="checkbox"
-                    checked={st === "done"}
-                    onChange={() => toggleDone(t.id)}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-sky-600 dark:border-slate-600 dark:bg-slate-800"
-                    title="Mark complete"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">{t.title}</div>
-                    <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      {t.due ? `Due ${t.due}` : "No due date"}
-                    </div>
-                    {t.notes && (
-                      <div className="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
-                        {t.notes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge color={statusBadge[st] || "slate"}>{statusLabel[st]}</Badge>
-                    <Button variant="ghost" onClick={() => openEdit(t)}>Edit</Button>
-                    <Button variant="ghost" onClick={() => remove(t.id)}>Remove</Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
         )}
-      </Card>
+      </form>
 
-      <Modal
-        open={!!editing}
-        onClose={() => setEditing(null)}
-        title="Edit task"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={saveEdit}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <div className="mb-1 text-sm text-slate-600 dark:text-slate-300">Title</div>
-            <Input value={editTitle} onChange={e=>setEditTitle(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <div className="mb-1 text-sm text-slate-600 dark:text-slate-300">Due</div>
-              <DateTimeField mode="date" value={editDue} onChange={setEditDue} placeholder="Due date" />
-            </div>
-            <div>
-              <div className="mb-1 text-sm text-slate-600 dark:text-slate-300">Status</div>
-              <select
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 transition focus:border-sky-400 focus-ring dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                value={editStatus}
-                onChange={e=>setEditStatus(e.target.value)}
-              >
-                <option value="todo">Not Started Yet</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Complete</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <div className="mb-1 text-sm text-slate-600 dark:text-slate-300">Notes</div>
-            <textarea
-              rows={5}
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus-ring dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
-              value={editNotes}
-              onChange={e=>setEditNotes(e.target.value)}
-              placeholder="Details, links, sub-tasks…"
-            />
-          </div>
+      {error && (
+        <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-200">
+          {error}
         </div>
-      </Modal>
+      )}
+
+      {/* Task list */}
+      {loading ? (
+        <div className="text-sm text-slate-500">Loading…</div>
+      ) : items.length === 0 ? (
+        <div className="text-sm text-slate-500">No tasks yet.</div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-900/50">
+              <tr className="text-left">
+                <th className="px-3 py-2">Title</th>
+                <th className="px-3 py-2 w-44">Status</th>
+                <th className="px-3 py-2 w-56">Due</th>
+                <th className="px-3 py-2 w-40">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {items.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onPersist={persist}
+                  onRemove={removeTask}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TaskRow({ task, onPersist, onRemove }) {
+  const [editing, setEditing] = React.useState(false);
+  const [val, setVal] = React.useState(task.title);
+  const [status, setStatus] = React.useState(task.status || (task.completed ? "Done" : "Open"));
+  const [dueAt, setDueAt] = React.useState(task.dueAt || null);
+
+  React.useEffect(() => {
+    setVal(task.title);
+    setStatus(task.status || (task.completed ? "Done" : "Open"));
+    setDueAt(task.dueAt || null);
+  }, [task.title, task.status, task.dueAt, task.completed]);
+
+  const prettyDue = React.useMemo(() => {
+    if (!task.dueAt) return "";
+    const d = new Date(task.dueAt);
+    if (isNaN(d.getTime())) return "";
+    const fmt = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return fmt.format(d);
+  }, [task.dueAt]);
+
+  const styles = statusClasses(task.status || (task.completed ? "Done" : "Open"));
+
+  async function saveEdits() {
+    const patch = {
+      title: val.trim() || task.title,
+      status,
+      completed: status === "Done",
+      dueAt: dueAt || null,
+    };
+    await onPersist(task.id, patch);
+    setEditing(false);
+  }
+
+  return (
+    <>
+      <tr>
+        {/* Title */}
+        <td className="px-3 py-2 align-top">
+          {editing ? (
+            <input
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              value={val}
+              onChange={(e) => setVal(e.target.value)}
+              autoFocus
+            />
+          ) : (
+            <div className="whitespace-pre-wrap">{task.title}</div>
+          )}
+        </td>
+
+        {/* Status with colored circle */}
+        <td className="px-3 py-2 align-top">
+          {editing ? (
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className={`inline-flex items-center gap-2 rounded-md px-2 py-1 ${styles.pill} ${styles.text}`}>
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${styles.dot}`} />
+              {task.status || (task.completed ? "Done" : "Open")}
+            </span>
+          )}
+        </td>
+
+        {/* Due (display only if present; no control here) */}
+        <td className="px-3 py-2 align-top">
+          <div className="text-xs text-slate-600 dark:text-slate-400">
+            {prettyDue || <span className="opacity-60">—</span>}
+          </div>
+        </td>
+
+        {/* Actions */}
+        <td className="px-3 py-2 align-top">
+          <div className="flex flex-wrap gap-2">
+            {!editing ? (
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={saveEdits}
+                  className="rounded-md bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setVal(task.title);
+                    setStatus(task.status || (task.completed ? "Done" : "Open"));
+                    setDueAt(task.dueAt || null);
+                  }}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => onRemove(task.id)}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+
+      {/* Edit panel (only shows during editing): includes due date picker */}
+      {editing && (
+        <tr>
+          <td colSpan={4} className="px-3 pb-3">
+            <div className="mt-2 rounded-md border border-slate-200 p-3 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60">
+              <DateTimeField
+                value={dueAt}
+                onChange={setDueAt}
+                label="Due"
+                compact
+                className="space-y-1"
+              />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

@@ -1,41 +1,56 @@
+// frontend/src/auth/AuthProvider.jsx
 import React from "react";
 import { api } from "../lib/api";
 
-const AuthCtx = React.createContext(null);
+const AuthContext = React.createContext({
+  user: null,
+  setUser: () => {},
+  loading: true,
+  error: null,
+  refresh: async () => {},
+  logout: async () => {},
+});
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = React.useState(undefined); // undefined = loading; null = signed out
+  const [user, setUser] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
 
-  const loadMe = React.useCallback(async () => {
-    try { setUser(await api.me()); }
-    catch { setUser(null); }
+  const refresh = React.useCallback(async () => {
+    try {
+      setError(null);
+      const me = await api.me();
+      setUser(me.user || null);
+    } catch (e) {
+      // Not logged in or error -> clear user
+      setUser(null);
+      setError(e?.message || "Not authenticated");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  React.useEffect(() => { loadMe(); }, [loadMe]);
-
-  const value = React.useMemo(() => ({
-    user,
-    loading: user === undefined,
-    async login(email, password) {
-      const u = await api.login({ email, password });
-      setUser(u);
-    },
-    async register(name, email, password) {
-      const u = await api.register({ name, email, password });
-      setUser(u);
-    },
-    async logout() {
+  const logout = React.useCallback(async () => {
+    try {
       await api.logout();
+    } finally {
       setUser(null);
-    },
-    async refresh() { await loadMe(); }, // <--- NEW: allow components to refresh user info
-  }), [user, loadMe]);
+    }
+  }, []);
 
-  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
+  // Hydrate on first mount
+  React.useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const value = React.useMemo(
+    () => ({ user, setUser, loading, error, refresh, logout }),
+    [user, loading, error, refresh, logout]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = React.useContext(AuthCtx);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  return React.useContext(AuthContext);
 }

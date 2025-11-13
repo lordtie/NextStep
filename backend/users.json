@@ -1,0 +1,22 @@
+{
+  "david": {
+    "name": "David Obst"
+  },
+  "demo": {
+    "name": "demo"
+  },
+  "admin": {
+    "username": "admin",
+    "name": "Admin",
+    "email": "2@2",
+    "passwordHash": "$2b$10$GQrcVG5n1c3mnx8OMZWtJOjvB5efZSSwjGYuNwDBNzYdN0TVVYSJq",
+    "createdAt": "2025-11-12T16:35:30.382Z"
+  },
+  "test": {
+    "username": "test",
+    "name": "David",
+    "email": "test@gmail.com",
+    "passwordHash": "$2b$10$Ag3Zsy/1xAjpVvra8D/bIefLKwM.HnMSgtBXh0.rYOdFb8xjbDl0i",
+    "createdAt": "2025-11-12T17:04:46.332Z"
+  }
+}

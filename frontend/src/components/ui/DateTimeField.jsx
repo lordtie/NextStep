@@ -1,126 +1,212 @@
+// frontend/src/components/DateTimeField.jsx
 import React from "react";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
-import { format } from "date-fns";
-
-const popperBase =
-  "absolute z-50 mt-1 rounded-xl border bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900";
-
-function TimeSelect({ value, onChange, stepMinutes = 15 }) {
-  // value: string "HH:MM"
-  const options = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += stepMinutes) {
-      const hh = String(h).padStart(2, "0");
-      const mm = String(m).padStart(2, "0");
-      options.push(`${hh}:${mm}`);
-    }
-  }
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 transition focus:border-sky-400 focus-ring dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-    >
-      {options.map((o) => (
-        <option key={o} value={o}>{o}</option>
-      ))}
-    </select>
-  );
-}
 
 /**
  * Props:
- *  mode: "date" | "datetime"
- *  value: Date | null
- *  onChange: (Date|null) => void
- *  placeholder?: string
+ *  - value: ISO string | Date | null
+ *  - onChange: (isoStringOrNull) => void
+ *  - label?: string
+ *  - required?: boolean
+ *  - min?: string (ISO) | Date
+ *  - max?: string (ISO) | Date
+ *  - className?: string (wrapper div)
+ *  - compact?: boolean (tighter layout)
+ *
+ * Behavior:
+ *  - Renders native <input type="date"> and <input type="time">
+ *  - Quick picks: Now (only) + Clear
+ *  - Emits ISO (UTC) from local date+time (or null)
+ *  - Shows a friendly preview line (local timezone)
  */
-export default function DateTimeField({ mode = "date", value, onChange, placeholder = "" }) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
+export default function DateTimeField({
+  value,
+  onChange,
+  label = "Date & time",
+  required = false,
+  min,
+  max,
+  className = "",
+  compact = false,
+}) {
+  const [dateStr, setDateStr] = React.useState("");
+  const [timeStr, setTimeStr] = React.useState("");
 
+  // parse incoming value to local date+time strings
   React.useEffect(() => {
-    function onDoc(e) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-
-  const [time, setTime] = React.useState(value ? format(value, "HH:mm") : "09:00");
-
-  function setDay(day) {
-    if (!day) return;
-    if (mode === "date") {
-      // midnight local
-      const d = new Date(day);
-      d.setHours(0, 0, 0, 0);
-      onChange(d);
-      setOpen(false);
+    if (!value) {
+      setDateStr("");
+      setTimeStr("");
       return;
     }
-    const [hh, mm] = time.split(":").map((x) => parseInt(x, 10));
-    const d = new Date(day);
-    d.setHours(hh, mm, 0, 0);
-    onChange(d);
+    const d = value instanceof Date ? value : new Date(value);
+    if (isNaN(d.getTime())) {
+      setDateStr("");
+      setTimeStr("");
+      return;
+    }
+    setDateStr(formatDateLocal(d));
+    setTimeStr(formatTimeLocal(d));
+  }, [value]);
+
+  function emit(dateString, timeString) {
+    if (!dateString || !timeString) {
+      onChange?.(null);
+      return;
+    }
+    const iso = toIsoFromLocal(dateString, timeString);
+    onChange?.(iso);
   }
 
-  function applyTime(t) {
-    setTime(t);
-    if (!value) return;
-    const [hh, mm] = t.split(":").map((x) => parseInt(x, 10));
-    const d = new Date(value);
-    d.setHours(hh, mm, 0, 0);
-    onChange(d);
+  // Min/max handlers (accept ISO/Date props; convert to input-friendly strings)
+  const minDateStr = React.useMemo(() => (min ? toInputDate(min) : undefined), [min]);
+  const maxDateStr = React.useMemo(() => (max ? toInputDate(max) : undefined), [max]);
+
+  // Friendly preview
+  const pretty = React.useMemo(() => {
+    if (!dateStr || !timeStr) return "";
+    const d = fromLocal(dateStr, timeStr);
+    if (!d) return "";
+    const fmt = new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return fmt.format(d);
+  }, [dateStr, timeStr]);
+
+  // Quick picks
+  function setFromDate(d) {
+    if (!d || isNaN(d.getTime())) return;
+    const ds = formatDateLocal(d);
+    const ts = formatTimeLocal(d);
+    setDateStr(ds);
+    setTimeStr(ts);
+    emit(ds, ts);
+  }
+  function handleNow() {
+    setFromDate(new Date());
+  }
+  function handleClear() {
+    setDateStr("");
+    setTimeStr("");
+    onChange?.(null);
   }
 
-  const display = value
-    ? (mode === "date" ? format(value, "PPP") : `${format(value, "PP")} at ${format(value, "p")}`)
-    : "";
-
+  // Render
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-slate-900 transition hover:bg-slate-50 focus:border-sky-400 focus-ring dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-      >
-        <span className={display ? "" : "text-slate-400"}>
-          {display || placeholder}
-        </span>
-        <svg className="h-4 w-4 opacity-60" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
-      </button>
+    <div className={className || ""}>
+      <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+        {label}
+      </label>
 
-      {open && (
-        <div className={`${popperBase} border-slate-200 dark:border-slate-700`}>
-          <DayPicker
-            mode="single"
-            selected={value ?? undefined}
-            onSelect={setDay}
-            weekStartsOn={1}
-            className="rdp"
-            styles={{
-              caption: { color: "inherit" },
-              head_cell: { color: "inherit" },
-              day: { color: "inherit" },
-            }}
-          />
-          {mode === "datetime" && (
-            <TimeSelect value={time} onChange={applyTime} />
-          )}
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-            >
-              Close
-            </button>
-          </div>
+      <div className={`flex gap-2 ${compact ? "" : "mb-2"} flex-wrap`}>
+        <input
+          type="date"
+          value={dateStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setDateStr(v);
+            emit(v, timeStr);
+          }}
+          required={required}
+          min={minDateStr}
+          max={maxDateStr}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        />
+        <input
+          type="time"
+          value={timeStr}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTimeStr(v);
+            emit(dateStr, v);
+          }}
+          required={required}
+          step={60} /* minute resolution */
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        />
+      </div>
+
+      {/* Quick picks: Now + Clear only */}
+      <div className={`flex flex-wrap gap-2 ${compact ? "mb-2" : "mb-3"}`}>
+        <Quick onClick={handleNow} label="Now" />
+        <Quick onClick={handleClear} label="Clear" variant="secondary" />
+      </div>
+
+      {/* Preview */}
+      {pretty ? (
+        <div className="text-xs text-slate-600 dark:text-slate-400">
+          {pretty} ({tzAbbrev()})
         </div>
+      ) : (
+        <div className="text-xs text-slate-400">No date/time selected</div>
       )}
     </div>
   );
+}
+
+/* ---------- small subcomponents & utils ---------- */
+
+function Quick({ onClick, label, variant = "primary" }) {
+  const base =
+    "rounded-md px-2.5 py-1.5 text-xs font-medium border transition-colors active:translate-y-[1px]";
+  const styles =
+    variant === "primary"
+      ? "border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+      : "border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900";
+  return (
+    <button type="button" onClick={onClick} className={`${base} ${styles}`}>
+      {label}
+    </button>
+  );
+}
+
+function toIsoFromLocal(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const [y, m, d] = dateStr.split("-").map((n) => parseInt(n, 10));
+  const [hh, mm] = timeStr.split(":").map((n) => parseInt(n, 10));
+  const local = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+  if (isNaN(local.getTime())) return null;
+  return local.toISOString();
+}
+
+function fromLocal(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  const [y, m, d] = dateStr.split("-").map((n) => parseInt(n, 10));
+  const [hh, mm] = timeStr.split(":").map((n) => parseInt(n, 10));
+  const local = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+  return isNaN(local.getTime()) ? null : local;
+}
+
+function toInputDate(x) {
+  const d = x instanceof Date ? x : new Date(x);
+  if (isNaN(d.getTime())) return undefined;
+  return formatDateLocal(d);
+}
+
+function formatDateLocal(d) {
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatTimeLocal(d) {
+  const hh = `${d.getHours()}`.padStart(2, "0");
+  const mm = `${d.getMinutes()}`.padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function tzAbbrev() {
+  try {
+    const p = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" })
+      .formatToParts(new Date())
+      .find((x) => x.type === "timeZoneName");
+    return p?.value || "local time";
+  } catch {
+    return "local time";
+  }
 }

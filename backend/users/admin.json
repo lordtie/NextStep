@@ -1,21 +1,10 @@
 {
-  "tasks": [
-    {
-      "id": "mhvnq50t12sl08",
-      "title": "Go for a Run",
-      "due": "2025-11-12",
-      "status": "todo",
-      "done": false,
-      "notes": "run 5 miles at 7:30 pace",
-      "priority": "normal",
-      "createdAt": "2025-11-12T07:06:52.013Z",
-      "updatedAt": "2025-11-12T08:19:12.881Z"
-    }
-  ],
+  "tasks": [],
   "events": [],
   "settings": {
     "name": "Admin",
     "timezone": "America/Chicago",
-    "theme": "dark"
+    "theme": "dark",
+    "email": "2@2"
   }
 }

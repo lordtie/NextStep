@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "name": "David",
+    "email": "test@gmail.com",
+    "timezone": "America/Chicago",
+    "theme": "dark"
+  },
+  "events": [],
+  "tasks": []
+}

@@ -1,83 +1,64 @@
+// frontend/src/components/Sidebar.jsx
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import {
-  CalendarDaysIcon,
-  HomeIcon,
-  ListBulletIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-} from "@heroicons/react/24/outline";
-import Logo from "../assets/nextstep-logo.png"; // <-- add your logo here
 
-const LINKS = [
-  { label: "Dashboard", icon: HomeIcon, to: "/dashboard" },
-  { label: "Tasks", icon: ListBulletIcon, to: "/tasks" },
-  { label: "Calendar", icon: CalendarDaysIcon, to: "/calendar" },
-  { label: "Settings", icon: Cog6ToothIcon, to: "/settings" },
-];
-
-export default function SidebarNav({ variant = "desktop", className = "", onNavigate }) {
+export default function Sidebar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const baseWrapper =
-    variant === "desktop"
-      ? "hidden md:flex md:w-64 md:flex-col"
-      : "flex w-72 flex-col";
+  const active =
+    "block rounded-md px-3 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700";
+  const inactive =
+    "block rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
 
   return (
-    <aside
-      className={`${baseWrapper} ${className}
-                  border-r border-slate-200 bg-white
-                  dark:border-slate-700 dark:bg-slate-900/80`}
-    >
-      <div className="flex h-16 items-center gap-3 px-4">
-        {/* Logo replaces the old blue rounded square */}
-        <img
-          src={Logo}
-          alt="NextStep logo"
-          className="h-12 w-12 rounded-xl object-contain"
-          draggable={false}
-        />
-        <div className="text-lg font-semibold tracking-tight">NextStep</div>
-      </div>
-
-      <nav className="mt-2 flex-1 space-y-1 px-3">
-        {LINKS.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            onClick={() => onNavigate && onNavigate()}
-            className={({ isActive }) =>
-              [
-                "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium",
-                isActive
-                  ? "bg-sky-50 text-sky-800 ring-1 ring-sky-200 dark:bg-slate-800/70 dark:text-white dark:ring-0"
-                  : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/60",
-              ].join(" ")
-            }
-          >
-            <Icon className="h-5 w-5 text-slate-400 group-[.active]:text-sky-700 group-hover:text-slate-600 dark:text-slate-400 dark:group-[.active]:text-white" />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="px-4 pb-4 pt-2 space-y-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-700
-                        dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
-          <div className="font-medium">{user?.name || user?.email}</div>
-          <div className="text-slate-500 dark:text-slate-400">{user?.email}</div>
+    // NOTE: no `hidden md:block` here → shows on mobile too (this is what made it duplicate)
+    <aside className="w-56 shrink-0 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 h-screen">
+      <div className="flex h-full flex-col">
+        {/* Title */}
+        <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="text-base font-semibold text-slate-900 dark:text-slate-100">NextStep</div>
         </div>
-        <button
-          onClick={async () => { await logout(); onNavigate && onNavigate(); }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100
-                     dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
-        >
-          <ArrowRightOnRectangleIcon className="h-5 w-5" />
-          Sign out
-        </button>
+
+        {/* Simple nav list */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="space-y-1">
+            <Item to="/" label="Dashboard" activeClass={active} inactiveClass={inactive} />
+            <Item to="/tasks" label="Tasks" activeClass={active} inactiveClass={inactive} />
+            <Item to="/calendar" label="Calendar" activeClass={active} inactiveClass={inactive} />
+            <Item to="/notes" label="Notes" activeClass={active} inactiveClass={inactive} />
+            <Item to="/settings" label="Settings" activeClass={active} inactiveClass={inactive} />
+          </div>
+        </nav>
+
+        {/* Footer: tiny user line + logout */}
+        <div className="px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="mb-2 truncate text-xs text-slate-500 dark:text-slate-400">
+            {user?.name || "Signed in"}{user?.email ? ` · ${user.email}` : ""}
+          </div>
+          <button
+            onClick={async () => {
+              try { await logout(); } finally { navigate("/login", { replace: true }); }
+            }}
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:translate-y-[1px] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </aside>
+  );
+}
+
+function Item({ to, label, activeClass, inactiveClass }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => (isActive ? activeClass : inactiveClass)}
+    >
+      {label}
+    </NavLink>
   );
 }

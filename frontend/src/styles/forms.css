@@ -1,0 +1,65 @@
+/* frontend/src/styles/forms.css */
+/* Make form controls readable in both light/dark, including browser autofill */
+
+:root {
+  --field-bg-light: #ffffff;
+  --field-bg-dark: #0f172a;     /* slate-900-ish */
+  --field-text-light: #0f172a;  /* slate-900 */
+  --field-text-dark: #e2e8f0;   /* slate-200 */
+  --field-border-light: #cbd5e1;/* slate-300 */
+  --field-border-dark: #334155; /* slate-700 */
+  --field-placeholder-light: #94a3b8; /* slate-400 */
+  --field-placeholder-dark: #94a3b8;  /* slate-400 */
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.35); /* blue-500/35 */
+}
+
+input, textarea, select {
+  background-color: var(--field-bg-light);
+  color: var(--field-text-light);
+  border: 1px solid var(--field-border-light);
+  caret-color: currentColor;
+}
+::placeholder {
+  color: var(--field-placeholder-light);
+  opacity: 1;
+}
+
+/* Dark mode */
+:root.dark input,
+:root.dark textarea,
+:root.dark select {
+  background-color: var(--field-bg-dark);
+  color: var(--field-text-dark);
+  border-color: var(--field-border-dark);
+}
+:root.dark ::placeholder {
+  color: var(--field-placeholder-dark);
+}
+
+/* Focus */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: #60a5fa; /* blue-400 */
+}
+
+/* Fix Chrome/Edge/Safari autofill making text unreadable */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--field-text-light);
+  transition: background-color 5000s ease-in-out 0s; /* prevent yellow flash */
+}
+:root.dark input:-webkit-autofill,
+:root.dark textarea:-webkit-autofill,
+:root.dark select:-webkit-autofill {
+  -webkit-text-fill-color: var(--field-text-dark);
+}
+
+/* Ensure disabled looks different but still readable */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
