@@ -284,6 +284,55 @@ app.delete("/api/tasks/:id", requireAuth, async (req, res) => {
   }
 });
 
+// ---------- NOTES ROUTES ----------
+const {
+  listNotes,
+  createNote,
+  updateNote,
+  removeNote,
+} = require("./lib/noteStore");
+
+// GET /api/notes
+app.get("/api/notes", requireAuth, async (req, res) => {
+  try {
+    const notes = await listNotes(req);
+    res.json(notes);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to list notes", detail: String(e.message || e) });
+  }
+});
+
+// POST /api/notes
+app.post("/api/notes", requireAuth, async (req, res) => {
+  try {
+    const created = await createNote(req, req.body || {});
+    res.json(created);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to create note", detail: String(e.message || e) });
+  }
+});
+
+// PUT /api/notes/:id
+app.put("/api/notes/:id", requireAuth, async (req, res) => {
+  try {
+    const updated = await updateNote(req, req.params.id, req.body || {});
+    if (!updated) return res.status(404).json({ error: "Note not found" });
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to update note", detail: String(e.message || e) });
+  }
+});
+
+// DELETE /api/notes/:id
+app.delete("/api/notes/:id", requireAuth, async (req, res) => {
+  try {
+    const result = await removeNote(req, req.params.id);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to delete note", detail: String(e.message || e) });
+  }
+});
+
 // ---------- Health ----------
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, ts: Date.now() });

@@ -2,6 +2,7 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import Logo from "../assets/nextstep-logo.png";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -13,12 +14,15 @@ export default function Sidebar() {
     "block rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800";
 
   return (
-    // NOTE: no `hidden md:block` here → shows on mobile too (this is what made it duplicate)
+    <div className=" hidden md:block">
     <aside className="w-56 shrink-0 border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950 h-screen">
       <div className="flex h-full flex-col">
         {/* Title */}
         <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-800">
-          <div className="text-base font-semibold text-slate-900 dark:text-slate-100">NextStep</div>
+          <div className="flex items-center space-x-2">
+  <img src={Logo} alt="NextStep logo" className="h-12 w-12 rounded-lg object-contain" />
+  <div className="text-base font-semibold text-slate-900 dark:text-slate-100">NextStep</div>
+</div>
         </div>
 
         {/* Simple nav list */}
@@ -48,6 +52,9 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+    </div>
+
+  
   );
 }
 

@@ -5,8 +5,9 @@
   --cal-radius: 14px;
 }
 
-/* Wrap card look */
+/* Card wrapper – NOT the scroll container anymore */
 .calendar-card {
+  height: 620px; /* Slightly larger than FC height to account for padding */
   border: var(--cal-border) solid rgba(100, 116, 139, 0.25); /* slate-400/25 */
   border-radius: var(--cal-radius);
   padding: 8px;
@@ -108,4 +109,22 @@
   --fc-today-bg-color: rgba(59, 130, 246, 0.15);
   --fc-event-bg-color: #3b82f6;   /* blue-500 */
   --fc-event-border-color: #3b82f6;
+}
+
+/*  Thicker red "now" line in time grid views */
+.fc .fc-timegrid-now-indicator-line {
+  border-top-width: 3px; /* tweak 2–4px as you like */
+}
+
+.fc .fc-scroller {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.fc .fc-scroller::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Opera */
+}
+
+.html, body, #root {
+  overflow-y: hidden;
 }

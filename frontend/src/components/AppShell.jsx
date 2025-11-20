@@ -67,11 +67,8 @@ export default function AppShell({ children }) {
 
         {/* Main area */}
         <div className="flex-1">
-          {/* Desktop header */}
-          <header className="sticky top-0 hidden h-16 items-center justify-end border-b border-slate-200 bg-white px-6 backdrop-blur-sm md:flex
-                              dark:border-slate-700 dark:bg-slate-900/90">
-            <ThemeToggle />
-          </header>
+         
+          
 
           <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
         </div>

@@ -7,6 +7,7 @@ import CalendarPage from "./pages/Calendar";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Notes from "./pages/Notes";
 import { useAuth } from "./auth/AuthProvider";
 
 function RequireAuth({ children }) {
@@ -33,6 +34,7 @@ export default function App() {
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/notes" element={<Notes />} />
                 <Route path="*" element={<div className="p-6">Not found.</div>} />
               </Routes>
             </AppShell>

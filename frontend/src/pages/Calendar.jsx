@@ -19,6 +19,15 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [activeEvent, setActiveEvent] = React.useState(null);
 
+  // ScrollTime: tells FullCalendar where to vertically scroll *inside* its own scroller
+  const [scrollTime] = React.useState(() => {
+    const now = new Date();
+    now.setHours(now.getHours() - 4);
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    return `${h}:${m}:00`; // e.g. "14:30:00"
+  });
+
   React.useEffect(() => {
     let cancel = false;
     (async () => {
@@ -193,12 +202,11 @@ export default function CalendarPage() {
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
           initialView="timeGridWeek"
-          expandRows={true}
-          height="auto"
-          contentHeight="auto"
+          height={560}             // 👈 fixed calendar height → internal scroll
+          scrollTime={scrollTime}  // 👈 start scrolled near current time
           nowIndicator={true}
-          slotMinTime="06:00:00"
-          slotMaxTime="22:00:00"
+          slotMinTime="00:00:00"
+          slotMaxTime="24:00:00"
           slotDuration="00:30:00"
           allDaySlot={true}
           selectable={true}

@@ -64,6 +64,7 @@ async function readUserFile(username) {
       settings: { name: username, email: "", timezone: "America/Chicago", theme: "dark" },
       events: [],
       tasks: [],
+      notes: [],
     };
     await fsp.writeFile(file, JSON.stringify(data, null, 2), "utf8");
     return { file, data };
